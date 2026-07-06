@@ -30,6 +30,8 @@ jobs:
             path: vehiculo
           - service: zonas-espacios
             path: zonas-espacios
+          - service: ms-audit
+            path: ms-audite
 
     steps:
       - name: Checkout
@@ -73,29 +75,49 @@ jobs:
             -Dsonar.login=$SONAR_TOKEN
 
   notify:
-    name: Notify Telegram
-    runs-on: ubuntu-latest
-    needs: sonar
-    if: always()
+  name: Notify Telegram
+  runs-on: ubuntu-latest
+  needs: sonar
+  if: always()
 
-    steps:
-      - name: Notify Telegram
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SONAR_RESULT: ${{ needs.sonar.result }}
-        run: |
-          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-            echo "Telegram secrets are not configured. Skipping notification."
-            exit 0
-          fi
+  steps:
+    - name: Notify Telegram
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        SONAR_RESULT: ${{ needs.sonar.result }}
+      run: |
+        if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+          echo "Telegram secrets are not configured. Skipping notification."
+          exit 0
+        fi
 
-          if [ "$SONAR_RESULT" = "success" ]; then
-            MSG="Build and SonarCloud analysis successful for ${GITHUB_REPOSITORY} on ${GITHUB_REF}. Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          else
-            MSG="Build or SonarCloud analysis failed for ${GITHUB_REPOSITORY} on ${GITHUB_REF}. Check logs: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          fi
+        REPO="${GITHUB_REPOSITORY}"
+        BRANCH="${GITHUB_REF_NAME}"
+        AUTHOR="${GITHUB_ACTOR}"
+        COMMIT="${{ github.event.head_commit.message }}"
+        RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="$MSG"
+        if [ "$SONAR_RESULT" = "success" ]; then
+          STATUS="✅ Build y análisis de SonarCloud completados correctamente"
+        else
+          STATUS="❌ Build o análisis de SonarCloud falló"
+        fi
+
+        MSG="🚀 *Pipeline de GitHub Actions*
+
+${STATUS}
+
+📦 Repositorio: ${REPO}
+🌿 Rama: ${BRANCH}
+👤 Autor: ${AUTHOR}
+📝 Commit:
+${COMMIT}
+
+🔗 Ver ejecución:
+${RUN_URL}"
+
+        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          -d chat_id="${TELEGRAM_CHAT_ID}" \
+          -d parse_mode="Markdown" \
+          -d text="$MSG"
