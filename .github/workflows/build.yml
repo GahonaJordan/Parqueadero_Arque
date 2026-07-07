@@ -69,7 +69,7 @@ jobs:
         run: |
           ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -DskipTests \
-            -Dsonar.projectKey=${{ matrix.sonarKey || matrix.service }} \
+            -Dsonar.projectKey=${{ matrix.service }} \
             -Dsonar.projectName=${{ matrix.service }} \
             -Dsonar.organization=gahonajordan \
             -Dsonar.login=$SONAR_TOKEN
@@ -104,21 +104,17 @@ jobs:
             STATUS="Build or SonarCloud analysis failed"
           fi
 
-          MSG=$(cat <<EOF
-Pipeline for ${REPO}
-Branch: ${BRANCH}
-Author: ${AUTHOR}
-Commit: ${COMMIT}
-Status: ${STATUS}
-Run: ${RUN_URL}
-EOF
+          MSG=$(cat <<'EOF'
+          Pipeline for ${REPO}
+          Branch: ${BRANCH}
+          Author: ${AUTHOR}
+          Commit: ${COMMIT}
+          Status: ${STATUS}
+          Run: ${RUN_URL}
+          EOF
           )
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             --data-urlencode "text=${MSG}"
-          STATUS="❌ Build o análisis de SonarCloud falló"
-        fi
-
-        MSG="🚀 *Pipeline de GitHub Actions*
 
