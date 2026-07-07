@@ -86,14 +86,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: sonar
     if: always()
+    permissions:
+      actions: read
+      contents: read
 
     steps:
-      - name: Notify Telegram
+      - name: Build and send report
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_RESULT: ${{ needs.sonar.result }}
         run: |
+          set -e
+
           if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
             echo "Telegram secrets are not configured. Skipping notification."
             exit 0
@@ -102,26 +108,57 @@ jobs:
           REPO="${GITHUB_REPOSITORY}"
           BRANCH="${GITHUB_REF_NAME}"
           AUTHOR="${GITHUB_ACTOR}"
-          COMMIT="${{ github.event.head_commit.message }}"
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -n 1)
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          EVENT="${GITHUB_EVENT_NAME}"
 
           if [ "$SONAR_RESULT" = "success" ]; then
-            STATUS="Build and SonarCloud analysis completed successfully"
+            HEADER="✅ *Pipeline exitoso*"
+          elif [ "$SONAR_RESULT" = "cancelled" ]; then
+            HEADER="⚠️ *Pipeline cancelado*"
           else
-            STATUS="Build or SonarCloud analysis failed"
+            HEADER="❌ *Pipeline con errores*"
           fi
 
-          MSG=$(cat <<'EOF'
-          Pipeline for ${REPO}
-          Branch: ${BRANCH}
-          Author: ${AUTHOR}
-          Commit: ${COMMIT}
-          Status: ${STATUS}
-          Run: ${RUN_URL}
-          EOF
+          # Consultar el detalle de cada job del matrix vía API de GitHub
+          JOBS_JSON=$(curl -s \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100")
+
+          SERVICES_REPORT=$(echo "$JOBS_JSON" | jq -r '
+            .jobs[]
+            | select(.name | startswith("Build and analyze "))
+            | .name as $n
+            | (if .conclusion == "success" then "✅"
+               elif .conclusion == "failure" then "❌"
+               elif .conclusion == "cancelled" then "⚠️"
+               elif .conclusion == "skipped" then "⏭️"
+               else "❔" end) as $icon
+            | "\($icon) \($n | sub("Build and analyze "; ""))"
+          ')
+
+          if [ -z "$SERVICES_REPORT" ]; then
+            SERVICES_REPORT="(no se pudo obtener el detalle por servicio)"
+          fi
+
+          MSG=$(cat <<EOF
+${HEADER}
+
+📦 *Repositorio:* ${REPO}
+🌿 *Rama:* ${BRANCH}
+👤 *Autor:* ${AUTHOR}
+📝 *Commit:* ${COMMIT_MSG}
+🔀 *Evento:* ${EVENT}
+
+*Resultado por microservicio:*
+${SERVICES_REPORT}
+
+🔗 [Ver ejecución completa](${RUN_URL})
+EOF
           )
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="Markdown" \
             --data-urlencode "text=${MSG}"
-
