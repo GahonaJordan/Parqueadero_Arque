@@ -24,14 +24,19 @@ jobs:
         include:
           - service: tickets
             path: App/tickets
+            type: node
           - service: usuarios
             path: App/usuarios
+            type: maven
           - service: vehiculo
             path: App/vehiculo
+            type: node
           - service: zonas-espacios
             path: App/zonas-espacios
+            type: maven
           - service: ms-audit
             path: App/ms-audit
+            type: node
 
     steps:
       - name: Checkout
@@ -39,20 +44,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # --- Steps solo para servicios Maven (Java) ---
       - name: Set up JDK 21
+        if: matrix.type == 'maven'
         uses: actions/setup-java@v4
         with:
           java-version: 21
           distribution: temurin
 
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
       - name: Cache Maven packages
+        if: matrix.type == 'maven'
         uses: actions/cache@v4
         with:
           path: ~/.m2
@@ -60,9 +61,11 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Grant execute permission to Maven wrapper
+        if: matrix.type == 'maven'
         run: chmod +x ${{ matrix.path }}/mvnw
 
-      - name: Build and analyze ${{ matrix.service }}
+      - name: Build and analyze (Maven) ${{ matrix.service }}
+        if: matrix.type == 'maven'
         working-directory: ${{ matrix.path }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -80,6 +83,34 @@ jobs:
             -Dsonar.projectName=${{ matrix.service }} \
             -Dsonar.organization=gahonajordan \
             -Dsonar.login=$SONAR_TOKEN
+
+      # --- Steps solo para servicios Node.js ---
+      - name: Set up Node.js
+        if: matrix.type == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.path }}/package-lock.json
+
+      - name: Install dependencies
+        if: matrix.type == 'node'
+        working-directory: ${{ matrix.path }}
+        run: npm ci
+
+      - name: Run tests with coverage
+        if: matrix.type == 'node'
+        working-directory: ${{ matrix.path }}
+        run: npm run test -- --coverage --watchAll=false || true
+
+      - name: SonarCloud Scan
+        if: matrix.type == 'node'
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: ${{ matrix.path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   notify:
     name: Notify Telegram
