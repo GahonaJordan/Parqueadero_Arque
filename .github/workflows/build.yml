@@ -23,15 +23,15 @@ jobs:
       matrix:
         include:
           - service: tickets
-            path: tickets
+            path: App/tickets
           - service: usuarios
-            path: usuarios
+            path: App/usuarios
           - service: vehiculo
-            path: vehiculo
+            path: App/vehiculo
           - service: zonas-espacios
-            path: zonas-espacios
+            path: App/zonas-espacios
           - service: ms-audit
-            path: ms-audit
+            path: App/ms-audit
 
     steps:
       - name: Checkout
@@ -67,7 +67,14 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          if [ -f "./mvnw" ]; then
+            chmod +x ./mvnw
+            MVN="./mvnw"
+          else
+            MVN="mvn"
+          fi
+
+          $MVN -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -DskipTests \
             -Dsonar.projectKey=${{ matrix.service }} \
             -Dsonar.projectName=${{ matrix.service }} \
