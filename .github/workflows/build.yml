@@ -142,21 +142,8 @@ jobs:
             SERVICES_REPORT="(no se pudo obtener el detalle por servicio)"
           fi
 
-          MSG=$(cat <<EOF
-${HEADER}
-
-📦 *Repositorio:* ${REPO}
-🌿 *Rama:* ${BRANCH}
-👤 *Autor:* ${AUTHOR}
-📝 *Commit:* ${COMMIT_MSG}
-🔀 *Evento:* ${EVENT}
-
-*Resultado por microservicio:*
-${SERVICES_REPORT}
-
-🔗 [Ver ejecución completa](${RUN_URL})
-EOF
-          )
+          MSG=$(printf '%s\n\n📦 *Repositorio:* %s\n🌿 *Rama:* %s\n👤 *Autor:* %s\n📝 *Commit:* %s\n🔀 *Evento:* %s\n\n*Resultado por microservicio:*\n%s\n\n🔗 [Ver ejecución completa](%s)' \
+            "$HEADER" "$REPO" "$BRANCH" "$AUTHOR" "$COMMIT_MSG" "$EVENT" "$SERVICES_REPORT" "$RUN_URL")
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
