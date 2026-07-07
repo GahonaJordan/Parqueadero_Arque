@@ -105,9 +105,15 @@ jobs:
 
       - name: SonarCloud Scan
         if: matrix.type == 'node'
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         with:
           projectBaseDir: ${{ matrix.path }}
+          args: >
+            -Dsonar.projectKey=${{ matrix.service }}
+            -Dsonar.projectName=${{ matrix.service }}
+            -Dsonar.organization=gahonajordan
+            -Dsonar.sources=src
+            -Dsonar.exclusions=**/node_modules/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
