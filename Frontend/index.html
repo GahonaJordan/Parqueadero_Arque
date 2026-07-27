@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Park SaaS — Condado / CCI / ESPE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+  <!-- LOGIN -->
+  <section id="view-login" class="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-teal-700">SaaS Multi-tenant</p>
+      <h1 class="mt-1 text-2xl font-bold">Parqueaderos</h1>
+      <p class="mt-2 text-sm text-slate-500">Una cuenta global. Elige el parqueadero al operar.</p>
+
+      <form id="loginForm" class="mt-6 space-y-4">
+        <label class="block text-sm">
+          <span class="font-medium text-slate-600">Parqueadero (obligatorio)</span>
+          <select id="loginTenant" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
+            <option value="">Selecciona…</option>
+            <option value="condado">Condado</option>
+            <option value="cci">CCI</option>
+            <option value="espe">ESPE</option>
+          </select>
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium text-slate-600">Usuario</span>
+          <input id="loginUser" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" autocomplete="username" />
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium text-slate-600">Contraseña</span>
+          <input id="loginPass" type="password" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" autocomplete="current-password" />
+        </label>
+        <button type="submit" class="w-full rounded-md bg-slate-900 py-2.5 font-semibold text-white hover:bg-slate-700">
+          Entrar
+        </button>
+      </form>
+      <p id="loginError" class="mt-3 hidden text-sm text-red-600"></p>
+      <p class="mt-4 text-center text-sm text-slate-500">
+        ¿Primera vez?
+        <button type="button" id="showRegister" class="font-semibold text-teal-700 hover:underline">Registrarse</button>
+      </p>
+      <p class="mt-2 text-center text-sm">
+        <button type="button" id="showRecover" class="font-semibold text-slate-700 hover:underline">¿Olvidaste tu contraseña?</button>
+      </p>
+      <p class="mt-2 text-center text-xs text-slate-400">API Gateway: <span id="gwLabel">http://localhost:8080</span></p>
+    </div>
+  </section>
+
+  <!-- REGISTER -->
+  <section id="view-register" class="hidden mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-4 py-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h1 class="text-2xl font-bold">Registro global</h1>
+      <p class="mt-2 text-sm text-slate-500">
+        Te registras <strong>una sola vez</strong>. Luego puedes usar Condado, CCI o ESPE sin volver a crear la cédula.
+      </p>
+      <form id="registerForm" class="mt-6 grid gap-3 sm:grid-cols-2">
+        <label class="block text-sm sm:col-span-2">
+          <span class="font-medium">Cédula (DNI)</span>
+          <input id="regDni" required maxlength="10" pattern="[0-9]+" class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium">Nombre</span>
+          <input id="regFirst" required class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium">Segundo nombre</span>
+          <input id="regMiddle" value="N" class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium">Apellido</span>
+          <input id="regLast" required class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium">Teléfono</span>
+          <input id="regPhone" required pattern="[0-9]+" class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm sm:col-span-2">
+          <span class="font-medium">Email</span>
+          <input id="regEmail" type="email" required class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm sm:col-span-2">
+          <span class="font-medium">Dirección</span>
+          <input id="regAddress" class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm sm:col-span-2">
+          <span class="font-medium">Nacionalidad</span>
+          <input id="regNationality" class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block text-sm sm:col-span-2">
+          <span class="font-medium">Contraseña</span>
+          <input id="regPass" type="password" required minlength="4" class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <button type="submit" class="sm:col-span-2 rounded-md bg-teal-700 py-2.5 font-semibold text-white hover:bg-teal-600">
+          Crear cuenta
+        </button>
+      </form>
+      <p id="regError" class="mt-3 hidden text-sm text-red-600"></p>
+      <p id="regOk" class="mt-3 hidden text-sm text-emerald-700"></p>
+      <button type="button" id="showLogin" class="mt-4 text-sm font-semibold text-slate-700 hover:underline">← Volver al login</button>
+    </div>
+  </section>
+
+  <!-- RECOVER PASSWORD -->
+  <section id="view-recover" class="hidden mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h1 class="text-2xl font-bold">Recuperar contraseña</h1>
+      <p class="mt-2 text-sm text-slate-500">Disponible para cualquier rol. Verifica tu identidad y define una nueva clave.</p>
+
+      <form id="forgotForm" class="mt-6 space-y-3">
+        <p class="text-xs font-semibold uppercase text-slate-500">Paso 1 — Verificar identidad</p>
+        <label class="block text-sm">Usuario<input id="recUser" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+        <label class="block text-sm">Email<input id="recEmail" type="email" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+        <label class="block text-sm">Cédula (DNI)<input id="recDni" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+        <button type="submit" class="w-full rounded-md bg-slate-900 py-2.5 font-semibold text-white">Obtener token</button>
+      </form>
+      <p id="forgotMsg" class="mt-2 text-sm"></p>
+
+      <form id="resetForm" class="mt-6 space-y-3 border-t pt-6">
+        <p class="text-xs font-semibold uppercase text-slate-500">Paso 2 — Nueva contraseña</p>
+        <label class="block text-sm">Token<input id="recToken" required class="mt-1 w-full rounded-md border px-3 py-2 font-mono text-xs" /></label>
+        <label class="block text-sm">Nueva contraseña<input id="recPass" type="password" required minlength="4" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+        <label class="block text-sm">Confirmar<input id="recPass2" type="password" required minlength="4" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+        <button type="submit" class="w-full rounded-md bg-teal-700 py-2.5 font-semibold text-white">Restablecer</button>
+      </form>
+      <p id="resetMsg" class="mt-2 text-sm"></p>
+      <button type="button" id="showLoginFromRecover" class="mt-4 text-sm font-semibold text-slate-700 hover:underline">← Volver al login</button>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="view-app" class="hidden">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div>
+          <p class="text-xs font-semibold uppercase text-teal-700">Park SaaS</p>
+          <p class="font-bold" id="userLabel">—</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm">
+            Parqueadero
+            <select id="tenantSelect" class="border-0 bg-transparent font-semibold outline-none" required>
+              <option value="">Selecciona…</option>
+              <option value="condado">Condado</option>
+              <option value="cci">CCI</option>
+              <option value="espe">ESPE</option>
+            </select>
+          </label>
+          <span id="rolesBadge" class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold uppercase text-slate-600"></span>
+          <button id="logoutBtn" class="rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-slate-50">Salir</button>
+        </div>
+      </div>
+      <nav class="mx-auto flex max-w-7xl flex-wrap gap-1 px-4 pb-2" id="mainNav">
+        <button data-tab="espacios" class="tab-btn active" data-roles="SUPER_ADMIN,ADMIN,OPERADOR,USUARIO">Espacios</button>
+        <button data-tab="tickets" class="tab-btn" data-roles="SUPER_ADMIN,ADMIN,OPERADOR,USUARIO">Tickets</button>
+        <button data-tab="usuarios" class="tab-btn" data-roles="SUPER_ADMIN,ADMIN">Usuarios</button>
+        <button data-tab="tenants" class="tab-btn" data-roles="SUPER_ADMIN">Tenants</button>
+        <button data-tab="zonas" class="tab-btn" data-roles="SUPER_ADMIN,ADMIN">Zonas</button>
+        <button data-tab="vehiculos" class="tab-btn" data-roles="SUPER_ADMIN,ADMIN,OPERADOR,USUARIO">Vehículos</button>
+        <button data-tab="auditoria" class="tab-btn" data-roles="SUPER_ADMIN,ADMIN">Auditoría</button>
+        <button data-tab="perfil" class="tab-btn" data-roles="SUPER_ADMIN,ADMIN,OPERADOR,USUARIO">Mi cuenta</button>
+      </nav>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-5">
+      <!-- ESPACIOS -->
+      <div id="tab-espacios" class="tab-panel">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Espacios · <span class="tenant-name">condado</span></h2>
+            <p class="text-sm text-slate-500">Actualización en vivo (SSE) vía API Gateway</p>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span id="indicator" class="h-3 w-3 rounded-full bg-amber-500"></span>
+            <span id="statusText">Sin consultar</span>
+            <button id="refreshEspacios" class="rounded-md bg-slate-900 px-3 py-1.5 font-semibold text-white">Actualizar</button>
+          </div>
+        </div>
+        <div class="mb-4 grid gap-3 sm:grid-cols-4">
+          <article class="metric"><span>Total</span><strong id="totalEspacios">0</strong></article>
+          <article class="metric"><span>Disponibles</span><strong id="totalDisponibles">0</strong></article>
+          <article class="metric"><span>Ocupados</span><strong id="totalOcupados">0</strong></article>
+          <article class="metric"><span>Reservados</span><strong id="totalReservados">0</strong></article>
+        </div>
+
+        <form id="espacioForm" class="mb-4 hidden grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-4" data-roles="SUPER_ADMIN,ADMIN,OPERADOR">
+          <label class="text-sm">Zona
+            <select id="espZona" required class="mt-1 w-full rounded-md border px-3 py-2"></select>
+          </label>
+          <label class="text-sm">Tipo
+            <select id="espTipo" class="mt-1 w-full rounded-md border px-3 py-2">
+              <option>AUTO</option><option>MOTO</option><option>BUSETA</option><option>BUS</option><option>CAMION</option>
+            </select>
+          </label>
+          <label class="text-sm sm:col-span-2">Descripción
+            <input id="espDesc" class="mt-1 w-full rounded-md border px-3 py-2" placeholder="Opcional" />
+          </label>
+          <button type="submit" class="sm:col-span-4 rounded-md bg-teal-700 py-2 font-semibold text-white">Crear espacio</button>
+        </form>
+        <p id="espacioMsg" class="mb-2 text-sm"></p>
+        <div id="zonasContainer" class="grid gap-4 lg:grid-cols-2"></div>
+      </div>
+
+      <!-- TICKETS -->
+      <div id="tab-tickets" class="tab-panel hidden">
+        <h2 class="text-xl font-bold">Tickets · <span class="tenant-name">condado</span></h2>
+        <p class="mt-1 text-sm text-slate-500">La cédula debe existir (registro global). El ticket queda en este parqueadero.</p>
+
+        <form id="ticketForm" class="mt-4 grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4" data-roles="SUPER_ADMIN,ADMIN,USUARIO">
+          <label class="text-sm">DNI<input id="tkDni" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Placa
+            <select id="tkPlaca" required disabled class="mt-1 w-full rounded-md border px-3 py-2">
+              <option value="">Primero ingresa la cédula…</option>
+            </select>
+          </label>
+          <label class="text-sm">ID Espacio<input id="tkEspacio" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Zona<input id="tkZona" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <button type="submit" class="sm:col-span-2 lg:col-span-4 rounded-md bg-teal-700 py-2 font-semibold text-white">Crear ticket</button>
+        </form>
+        <p class="mt-1 text-xs text-slate-500" data-roles="USUARIO">USUARIO: puede crear tickets, no cerrarlos ni eliminarlos.</p>
+        <p id="ticketMsg" class="mt-2 text-sm"></p>
+
+        <div class="mt-6 flex items-center justify-between">
+          <h3 class="font-bold">Activos en este tenant</h3>
+          <button id="refreshTickets" class="text-sm font-semibold text-teal-700">Recargar</button>
+        </div>
+        <div class="mt-2 overflow-x-auto rounded-xl border bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th class="px-3 py-2">Placa</th>
+                <th class="px-3 py-2">DNI</th>
+                <th class="px-3 py-2">Ingreso</th>
+                <th class="px-3 py-2">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="ticketsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- USUARIOS -->
+      <div id="tab-usuarios" class="tab-panel hidden">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Usuarios</h2>
+            <p class="text-sm text-slate-500" id="usuariosHint">SUPER_ADMIN / ADMIN: crear usuarios; OPERADOR exige tenant</p>
+          </div>
+          <button id="refreshUsers" class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Recargar</button>
+        </div>
+        <div class="overflow-x-auto rounded-xl border bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th class="px-3 py-2">Usuario</th>
+                <th class="px-3 py-2">Nombre</th>
+                <th class="px-3 py-2">Email</th>
+                <th class="px-3 py-2">Roles</th>
+                <th class="px-3 py-2">Tenant</th>
+                <th class="px-3 py-2">Activo</th>
+                <th class="px-3 py-2">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+
+        <div id="userEditPanel" class="mt-4 hidden rounded-xl border bg-white p-4">
+          <h3 class="font-bold">Editar usuario</h3>
+          <form id="userEditForm" class="mt-3 grid gap-3 sm:grid-cols-3">
+            <input type="hidden" id="editUserId" />
+            <label class="text-sm">Nombre<input id="editFirst" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+            <label class="text-sm">Apellido<input id="editLast" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+            <label class="text-sm">Email<input id="editEmail" type="email" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+            <label class="text-sm">Teléfono<input id="editPhone" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+            <label class="text-sm">Activo
+              <select id="editActive" class="mt-1 w-full rounded-md border px-3 py-2">
+                <option value="true">Sí</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            <div class="flex items-end gap-2 sm:col-span-3">
+              <button type="submit" class="rounded-md bg-teal-700 px-4 py-2 font-semibold text-white">Guardar</button>
+              <button type="button" id="cancelUserEdit" class="rounded-md border px-4 py-2 font-semibold">Cancelar</button>
+            </div>
+          </form>
+          <div id="assignRoleBox" class="mt-4 hidden border-t pt-4" data-roles="SUPER_ADMIN,ADMIN">
+            <p class="text-sm font-semibold" id="assignRoleHint">Asignación de roles</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <select id="roleSelect" class="rounded-md border px-3 py-2 text-sm"></select>
+              <button type="button" id="assignRoleBtn" class="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Cambiar rol</button>
+              <button type="button" id="unassignRoleBtn" class="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700">Quitar rol</button>
+            </div>
+            <p class="mt-1 text-xs text-slate-500">
+              Selecciona el rol actual para quitarlo. SUPER_ADMIN puede quitar ADMIN, OPERADOR o USUARIO; ADMIN solo OPERADOR.
+            </p>
+          </div>
+          <div id="assignTenantBox" class="mt-3 hidden border-t pt-3" data-roles="SUPER_ADMIN">
+            <p class="text-sm font-semibold">Asignación de tenant</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <select id="assignTenantSelect" class="rounded-md border px-3 py-2 text-sm" title="Seleccionar tenant">
+                <option value="">Seleccionar tenant…</option>
+              </select>
+              <button type="button" id="assignTenantBtn" class="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white">Asignar tenant</button>
+              <button type="button" id="unassignTenantBtn" class="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700">Quitar tenant</button>
+            </div>
+            <p class="mt-1 text-xs text-slate-500" id="tenantBoxHint">
+              SUPER_ADMIN: asigna un tenant a cada ADMIN.<br/>
+              ADMIN: los OPERADORES heredan automáticamente su tenant.
+            </p>
+          </div>
+          <p id="userEditMsg" class="mt-2 text-sm"></p>
+        </div>
+      </div>
+
+      <!-- TENANTS (SUPER_ADMIN) -->
+      <div id="tab-tenants" class="tab-panel hidden">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Tenants</h2>
+            <p class="text-sm text-slate-500">Solo SUPER_ADMIN puede crear, actualizar y eliminar parqueaderos</p>
+          </div>
+          <button id="refreshTenants" class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Recargar</button>
+        </div>
+        <form id="tenantForm" class="mb-4 grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="text-sm">Slug<input id="tenantSlug" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="ej. condado" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Nombre<input id="tenantName" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm sm:col-span-2">Descripción<input id="tenantDesc" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <button type="submit" class="sm:col-span-2 lg:col-span-4 rounded-md bg-teal-700 py-2 font-semibold text-white">Crear tenant</button>
+        </form>
+        <p id="tenantMsg" class="mb-2 text-sm"></p>
+        <div class="overflow-x-auto rounded-xl border bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th class="px-3 py-2">Slug</th>
+                <th class="px-3 py-2">Nombre</th>
+                <th class="px-3 py-2">Activo</th>
+                <th class="px-3 py-2">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tenantsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ZONAS (ADMIN) -->
+      <div id="tab-zonas" class="tab-panel hidden">
+        <h2 class="text-xl font-bold">Zonas · <span class="tenant-name">condado</span></h2>
+        <form id="zonaForm" class="mt-4 grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="text-sm">Nombre<input id="zonaNombre" required maxlength="25" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Tipo
+            <select id="zonaTipo" class="mt-1 w-full rounded-md border px-3 py-2">
+              <option>GENERAL</option><option>VIP</option><option>VISITATES</option><option>PREFERENCIAL</option>
+            </select>
+          </label>
+          <label class="text-sm">Capacidad<input id="zonaCap" type="number" min="1" max="200" value="20" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Descripción<input id="zonaDesc" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <button type="submit" class="sm:col-span-2 lg:col-span-4 rounded-md bg-teal-700 py-2 font-semibold text-white">Crear zona</button>
+        </form>
+        <p id="zonaMsg" class="mt-2 text-sm"></p>
+        <div class="mt-4 overflow-x-auto rounded-xl border bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
+              <tr><th class="px-3 py-2">Nombre</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Capacidad</th><th class="px-3 py-2">Acción</th></tr>
+            </thead>
+            <tbody id="zonasBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- VEHICULOS -->
+      <div id="tab-vehiculos" class="tab-panel hidden">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-xl font-bold">Vehículos</h2>
+          <button id="refreshVehiculos" class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Recargar</button>
+        </div>
+        <p class="mb-2 text-xs text-slate-500" data-roles="USUARIO">USUARIO: puede registrar vehículos; no modificar ni eliminar.</p>
+        <form id="vehiculoForm" class="mb-4 hidden grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-3" data-roles="SUPER_ADMIN,ADMIN,OPERADOR,USUARIO">
+          <label class="text-sm">Tipo
+            <select id="vhTipo" class="mt-1 w-full rounded-md border px-3 py-2">
+              <option value="auto">auto</option>
+              <option value="motocicleta">motocicleta</option>
+              <option value="camioneta">camioneta</option>
+            </select>
+          </label>
+          <label class="text-sm">Placa<input id="vhPlaca" required placeholder="ABC-1234" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Marca<input id="vhMarca" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Modelo<input id="vhModelo" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Color<input id="vhColor" required class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Año<input id="vhAnio" type="number" required value="2020" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm">Clasificación
+            <select
+              id="vhClasif"
+              class="mt-1 w-full rounded-md border px-3 py-2"
+            >
+              <option value="Eléctrico">Eléctrico</option>
+              <option value="Híbrido">Híbrido</option>
+              <option value="Gasolina">Gasolina</option>
+              <option value="Diésel" selected>Diésel</option>
+            </select>
+          </label>
+          <label class="text-sm" id="vhExtraLabel">Puertas<input id="vhExtra1" type="number" value="4" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <label class="text-sm" id="vhExtraLabel2">Maletero (L)<input id="vhExtra2" type="number" value="400" class="mt-1 w-full rounded-md border px-3 py-2" /></label>
+          <button type="submit" class="sm:col-span-3 rounded-md bg-teal-700 py-2 font-semibold text-white">Registrar vehículo</button>
+        </form>
+        <p id="vehiculoMsg" class="mb-2 text-sm"></p>
+        <div class="overflow-x-auto rounded-xl border bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
+              <tr><th class="px-3 py-2">Placa</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Marca</th><th class="px-3 py-2">Modelo</th><th class="px-3 py-2">Acción</th></tr>
+            </thead>
+            <tbody id="vehiculosBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AUDITORIA -->
+      <div id="tab-auditoria" class="tab-panel hidden">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Auditoría</h2>
+            <p class="text-sm text-slate-500">Eventos recibidos por ms-audit vía RabbitMQ</p>
+          </div>
+          <button id="refreshAudit" class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Recargar</button>
+        </div>
+        <div class="overflow-x-auto rounded-xl border bg-white">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th class="px-3 py-2">Fecha</th>
+                <th class="px-3 py-2">Servicio</th>
+                <th class="px-3 py-2">Acción</th>
+                <th class="px-3 py-2">Entidad</th>
+                <th class="px-3 py-2">Usuario</th>
+              </tr>
+            </thead>
+            <tbody id="auditBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PERFIL -->
+      <div id="tab-perfil" class="tab-panel hidden">
+        <div class="max-w-lg rounded-xl border bg-white p-6">
+          <h2 class="text-xl font-bold">Mi cuenta</h2>
+          <dl class="mt-4 space-y-2 text-sm" id="perfilDl"></dl>
+          <p class="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+            Roles: <strong>ADMIN</strong> (todo) · <strong>OPERADOR</strong> (por tenant, modifica usuarios sin eliminar) · <strong>USUARIO</strong> (consulta).
+            Cualquier rol puede recuperar la contraseña desde el login.
+          </p>
+          <button type="button" id="goRecoverFromPerfil" class="mt-4 text-sm font-semibold text-teal-700 hover:underline">
+            Recuperar / cambiar contraseña
+          </button>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <script src="app.js?v=20260722-1"></script>
+</body>
+</html>

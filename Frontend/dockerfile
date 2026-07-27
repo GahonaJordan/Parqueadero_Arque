@@ -1,0 +1,6 @@
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
+COPY index.html ./index.html
+COPY app.css ./app.css
+COPY app.js ./app.js
+EXPOSE 80

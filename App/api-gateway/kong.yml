@@ -1,0 +1,129 @@
+# Kong API Gateway — DB-less (declarative)
+# Enrutamiento, rate limiting, CORS, transformación y proxy SSE
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: ms-usuarios
+    url: http://usuarios:9090
+    routes:
+      - name: auth
+        paths: ["/api/auth"]
+        strip_path: false
+      - name: users
+        paths: ["/api/users"]
+        strip_path: false
+      - name: roles
+        paths: ["/api/roles"]
+        strip_path: false
+      - name: tenants
+        paths: ["/api/tenants"]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 120
+          policy: local
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - "X-Gateway:kong"
+
+  - name: ms-zonas
+    url: http://zonas-espacios:8081
+    routes:
+      - name: zonas
+        paths: ["/api/zonas"]
+        strip_path: false
+      - name: espacios
+        paths: ["/api/espacios"]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 180
+          policy: local
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - "X-Gateway:kong"
+
+  - name: ms-tickets
+    url: http://tickets:3000
+    routes:
+      - name: tickets
+        paths: ["/tickets"]
+        strip_path: false
+      - name: sse
+        paths: ["/sse"]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 200
+          policy: local
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - "X-Gateway:kong"
+
+  - name: ms-vehiculo
+    url: http://vehiculo:3001
+    routes:
+      - name: vehiculo
+        paths: ["/vehiculo"]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 120
+          policy: local
+
+  - name: ms-audit
+    url: http://ms-audit:3004
+    routes:
+      - name: audit
+        paths: ["/audit"]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 60
+          policy: local
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "http://localhost:8000"
+        - "https://parqueadero.espe.edu.ec"
+        - "http://parqueadero.espe.edu.ec"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - Origin
+        - X-Requested-With
+        - X-Tenant-Id
+        - X-Internal-Key
+      credentials: true
+      max_age: 3600
+
+  # Validación JWT (HS256) — mismos claims que ms-usuarios
+  - name: jwt
+    enabled: false
+    config:
+      claims_to_verify:
+        - exp
+      key_claim_name: iss
+      # Activar en producción con consumers Kong; backends también validan JWT

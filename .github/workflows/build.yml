@@ -37,6 +37,9 @@ jobs:
           - service: ms-audit
             path: App/ms-audit
             type: node
+          - service: api-gateway
+            path: App/api-gateway
+            type: other
 
     steps:
       - name: Checkout
@@ -118,6 +121,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      # --- Steps solo para el API Gateway (Kong, config declarativa sin build/tests) ---
+      - name: SonarCloud Scan (api-gateway)
+        if: matrix.type == 'other'
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        with:
+          projectBaseDir: ${{ matrix.path }}
+          args: >
+            -Dsonar.projectKey=${{ matrix.service }}
+            -Dsonar.projectName=${{ matrix.service }}
+            -Dsonar.organization=gahonajordan
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/node_modules/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   notify:
     name: Notify Telegram
     runs-on: ubuntu-latest
@@ -143,7 +162,7 @@ jobs:
           fi
 
           REPO="${GITHUB_REPOSITORY}"
-          BRANCH="${GITHUB_REF_NAME}"
+          BRANCH="${GITHUB_REF_NAME}/${GITHUB_ACTOR}"
           AUTHOR="${GITHUB_ACTOR}"
           COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -n 1)
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
