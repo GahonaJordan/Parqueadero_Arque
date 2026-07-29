@@ -48,7 +48,7 @@ jobs:
             type: other
           - service: frontend
             sonarKey: parqueadero-arque-frontend
-            path: App/frontend
+            path: App/Frontend
             type: other
 
     steps:
