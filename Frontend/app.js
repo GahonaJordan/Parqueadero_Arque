@@ -1,4 +1,4 @@
-const GW = 'http://localhost:8080';
+const GW = `${window.location.protocol}//${window.location.host}`;
 const STORAGE_AUTH = 'park.auth';
 const STORAGE_TENANT = 'park.tenant';
 
@@ -52,12 +52,12 @@ const adminAssignedTenant = () => state.assignedTenant || null;
 /** Roles que el usuario actual puede asignar / quitar en el selector */
 const assignableRoleNames = () => {
   if (isSuperAdmin()) return ['ADMIN', 'USUARIO'];
-  if (hasRole('ADMIN')) return ['OPERADOR'];
+  if (hasRole('ADMIN')) return ['OPERADOR', 'USUARIO'];
   return [];
 };
 const removableRoleNames = () => {
   if (isSuperAdmin()) return ['ADMIN', 'OPERADOR', 'USUARIO'];
-  if (hasRole('ADMIN')) return ['OPERADOR'];
+  if (hasRole('ADMIN')) return ['OPERADOR', 'USUARIO'];
   return [];
 };
 
@@ -457,16 +457,25 @@ function renderEspacios() {
   }
 
   const canDeleteEspacio = isAdmin(); // SUPER_ADMIN o ADMIN
+  const canMaintenanceEspacio = hasRole('SUPER_ADMIN', 'ADMIN');
   $('zonasContainer').innerHTML = [...byZona.values()]
     .map((z) => {
       const cards = z.espacios
         .map((e) => {
           const meta = estadoMeta[e.estado] || { label: e.estado, className: '' };
-          const del = canDeleteEspacio
-            ? `<button data-del-esp="${escapeHtml(e.id)}" class="text-xs text-red-600 font-semibold">Eliminar</button>`
-            : '';
+          const actions = [];
+          if (canMaintenanceEspacio && e.estado !== 'MANTENIMIENTO') {
+            actions.push(`<button data-maint-esp="${escapeHtml(e.id)}" class="text-xs text-amber-600 font-semibold">Mantenimiento</button>`);
+          }
+          if (canMaintenanceEspacio && e.estado === 'MANTENIMIENTO') {
+            actions.push(`<button data-avail-esp="${escapeHtml(e.id)}" class="text-xs text-emerald-600 font-semibold">Disponible</button>`);
+          }
+          if (canDeleteEspacio) {
+            actions.push(`<button data-del-esp="${escapeHtml(e.id)}" class="text-xs text-red-600 font-semibold">Eliminar</button>`);
+          }
+          const actionsHtml = actions.length > 0 ? actions.join(' | ') : '';
           return `<div class="espacio-card ${meta.className}" data-id="${escapeHtml(e.id)}" data-zona="${escapeHtml(e.nombrezona || '')}">
-            <div><p class="font-semibold">${escapeHtml(e.nombre || e.descripcion || 'Espacio')}</p><p class="text-xs text-slate-600">Tipo: ${escapeHtml(String(e.tipo || 'SIN TIPO').replaceAll('_', ' '))}</p><p class="text-xs text-slate-500">${escapeHtml(e.id)}</p>${del}</div>
+            <div><p class="font-semibold">${escapeHtml(e.nombre || e.descripcion || 'Espacio')}</p><p class="text-xs text-slate-600">Tipo: ${escapeHtml(String(e.tipo || 'SIN TIPO').replaceAll('_', ' '))}</p><p class="text-xs text-slate-500">${escapeHtml(e.id)}</p>${actionsHtml ? `<p class="text-xs mt-1">${actionsHtml}</p>` : ''}</div>
             <span class="estado-badge">${escapeHtml(meta.label)}</span>
           </div>`;
         })
@@ -497,17 +506,49 @@ function renderEspacios() {
       }
     });
   });
+  $('zonasContainer').querySelectorAll('[data-maint-esp]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('¿Poner espacio en mantenimiento?')) return;
+      try {
+        await api(`/api/espacios/${btn.dataset.maintEsp}/estado`, {
+          method: 'PUT',
+          body: { estado: 'MANTENIMIENTO' },
+        });
+        await cargarEspacios();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+  $('zonasContainer').querySelectorAll('[data-avail-esp]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('¿Poner espacio disponible?')) return;
+      try {
+        await api(`/api/espacios/${btn.dataset.availEsp}/estado`, {
+          method: 'PUT',
+          body: { estado: 'DISPONIBLE' },
+        });
+        await cargarEspacios();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
 }
 
 async function cargarTickets() {
   if (!hasRole('SUPER_ADMIN', 'ADMIN', 'OPERADOR', 'USUARIO')) return;
   const tbody = $('ticketsBody');
-  tbody.innerHTML = '<tr><td class="px-3 py-3" colspan="4">Cargando…</td></tr>';
+  tbody.innerHTML = '<tr><td class="px-3 py-3" colspan="5">Cargando…</td></tr>';
   const canClose = hasRole('SUPER_ADMIN', 'ADMIN', 'OPERADOR');
+  const canReserve = hasRole('USUARIO');
+  const canManageReserva = hasRole('USUARIO', 'OPERADOR');
   try {
     const list = await api('/tickets/activos');
     if (!Array.isArray(list) || !list.length) {
-      tbody.innerHTML = '<tr><td class="px-3 py-3 text-slate-500" colspan="4">Sin tickets activos</td></tr>';
+      tbody.innerHTML = '<tr><td class="px-3 py-3 text-slate-500" colspan="5">Sin tickets activos ni reservas</td></tr>';
       return;
     }
     tbody.innerHTML = list
@@ -516,8 +557,14 @@ async function cargarTickets() {
         <td class="px-3 py-2 font-semibold">${escapeHtml(t.placa)}</td>
         <td class="px-3 py-2">${escapeHtml(t.dni)}</td>
         <td class="px-3 py-2">${escapeHtml(t.fechaIngreso || '')}</td>
+        <td class="px-3 py-2"><span class="text-xs font-semibold px-2 py-1 rounded ${
+          t.estado === 'RESERVADO' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
+        }">${escapeHtml(t.estado || 'ACTIVO')}</span></td>
         <td class="px-3 py-2">${
-          canClose
+          t.estado === 'RESERVADO' && canManageReserva
+            ? `<button data-activar="${escapeHtml(t.id)}" class="text-teal-700 font-semibold mr-2">Activar</button>
+               <button data-cancelar="${escapeHtml(t.id)}" class="text-red-600 font-semibold">Cancelar</button>`
+            : canClose && t.estado !== 'RESERVADO'
             ? `<button data-close="${escapeHtml(t.id)}" class="text-teal-700 font-semibold">Cerrar</button>`
             : '—'
         }</td>
@@ -535,8 +582,31 @@ async function cargarTickets() {
         }
       });
     });
+    tbody.querySelectorAll('[data-activar]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await api(`/tickets/${btn.dataset.activar}/activar`, { method: 'PATCH' });
+          await cargarTickets();
+          await cargarEspacios();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+    tbody.querySelectorAll('[data-cancelar]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Cancelar esta reserva?')) return;
+        try {
+          await api(`/tickets/${btn.dataset.cancelar}/reserva`, { method: 'DELETE' });
+          await cargarTickets();
+          await cargarEspacios();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
   } catch (err) {
-    tbody.innerHTML = `<tr><td class="px-3 py-3 text-red-600" colspan="4">${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td class="px-3 py-3 text-red-600" colspan="5">${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -713,7 +783,8 @@ async function cargarVehiculos() {
     tbody.innerHTML = list
       .map((v) => {
         const d = v.datos || v;
-        const del = isAdmin()
+        const canEditDelete = hasRole('USUARIO', 'ADMIN', 'SUPER_ADMIN');
+        const del = canEditDelete
           ? `<button data-del-vh="${escapeHtml(v.id)}" class="text-red-600 font-semibold">Eliminar</button>`
           : '—';
         return `<tr class="border-t">
@@ -1123,6 +1194,54 @@ $('ticketForm').addEventListener('submit', async (e) => {
 
   try {
     const r = await api('/tickets', {
+      method: 'POST',
+      body: {
+        dni,
+        placa,
+        idEspacio: $('tkEspacio').value.trim(),
+        zona: $('tkZona').value.trim(),
+        tenantId: state.tenant,
+      },
+    });
+    msg.textContent = typeof r === 'string' ? r : JSON.stringify(r);
+    msg.classList.add('text-emerald-700');
+    await cargarTickets();
+    await cargarEspacios();
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.classList.add('text-red-600');
+  }
+});
+
+$('crearReservaBtn')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const msg = $('ticketMsg');
+  msg.textContent = '';
+  msg.className = 'mt-2 text-sm';
+
+  const dni = $('tkDni').value.trim();
+  const valida = await validarPersona(dni);
+  if (!valida.ok) {
+    msg.textContent = valida.error + ' — Registra la persona primero en usuarios.';
+    msg.className = 'mt-2 text-sm text-red-600';
+    return;
+  }
+
+  const placa = $('tkPlaca').value;
+  if (!placa) {
+    msg.textContent = 'Selecciona o ingresa una placa válida.';
+    msg.className = 'mt-2 text-sm text-red-600';
+    return;
+  }
+  const validaPlaca = await validarPlaca(placa);
+  if (!validaPlaca.ok) {
+    msg.textContent = validaPlaca.error + ' — Registra el vehículo primero en la sección "Vehículos".';
+    msg.className = 'mt-2 text-sm text-red-600';
+    return;
+  }
+
+  try {
+    const r = await api('/tickets/reservas', {
       method: 'POST',
       body: {
         dni,

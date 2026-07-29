@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tickets
+  namespace: parqueaderos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tickets
+  template:
+    metadata:
+      labels:
+        app: tickets
+    spec:
+      containers:
+      - name: tickets
+        image: tickets:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: DB_HOST
+          value: "postgres-tickets"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "123456"
+        - name: DB_NAME
+          value: "tickets_db"
+        - name: MS_PERSONAS
+          value: "http://usuarios:9090/api/users"
+        - name: MS_ZONAS
+          value: "http://zonas-espacios:8081/api/espacios"
+        - name: MS_VEHICULOS
+          value: "http://vehiculo:3001/vehiculo"
+        - name: MS_AUTH_VALIDATE
+          value: "http://usuarios:9090/api/auth/validate"
+        - name: INTERNAL_API_KEY
+          value: "internal-service-key-parcial2"
+        - name: JWT_SECRET
+          value: "parcial2-arqui-jwt-secret-key-2026-min-256-bits!!"
+        - name: TARIFA_HORA
+          value: "1.0"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          value: ""
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "admin"
+        - name: RABBITMQ_PASSWORD
+          value: "admin123"
+        - name: RABBITMQ_QUEUE
+          value: "queue_audit"
+        - name: RABBITMQ_EXCHANGE
+          value: "exchange_audit"
+        - name: RABBITMQ_ROUTING_KEY
+          value: "routing_audit"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tickets
+  namespace: parqueaderos
+spec:
+  selector:
+    app: tickets
+  ports:
+  - port: 3000
+    targetPort: 3000

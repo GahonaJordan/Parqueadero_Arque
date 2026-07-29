@@ -31,10 +31,10 @@ public class User {
     @MapsId
     private Person person;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 255)
     private String passwordHash;
 
     @Column(name = "last_login")
@@ -42,6 +42,15 @@ public class User {
 
     @Builder.Default
     private boolean active = true;
+
+    /**
+     * Tenant asociado al usuario. Es obligatorio para ADMIN y OPERADOR;
+     * se deja nulo para SUPER_ADMIN y USUARIO.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    @ToString.Exclude
+    private Tenant tenant;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @ToString.Exclude

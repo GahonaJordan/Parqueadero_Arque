@@ -5,5 +5,6 @@ export interface Espacio {
     nombrezona: string;
     idzona: string;
     tipo?: string;
-    estado: string;
+    estado?: string;
+    tenantId?: string;
 }

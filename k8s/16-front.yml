@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-monitoreo
+  namespace: parqueaderos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-monitoreo
+  template:
+    metadata:
+      labels:
+        app: frontend-monitoreo
+    spec:
+      containers:
+      - name: frontend-monitoreo
+        image: docker.io/library/frontend-monitoreo:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-monitoreo
+  namespace: parqueaderos
+spec:
+  selector:
+    app: frontend-monitoreo
+  ports:
+  - port: 80
+    targetPort: 80

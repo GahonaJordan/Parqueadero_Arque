@@ -13,6 +13,19 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000
 
 server:
   port: 8081
@@ -22,3 +35,4 @@ auth:
   jwt:
     secret: ${JWT_SECRET:parcial2-arqui-jwt-secret-key-2026-min-256-bits!!}
   internal-api-key: ${INTERNAL_API_KEY:internal-service-key-parcial2}
+  usuarios-validate-url: ${MS_AUTH_VALIDATE:http://localhost:9090/api/auth/validate}

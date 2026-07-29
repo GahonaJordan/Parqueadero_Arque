@@ -1,0 +1,298 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - parqueadero-net
+
+  usuarios:
+    build:
+      context: ./usuarios
+      dockerfile: dockerfile
+    ports:
+      - "9090:9090"
+    environment:
+      DB_URL: jdbc:postgresql://postgres-usuarios:5432/usuarios_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: 123456
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASSWORD: admin123
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - postgres-usuarios
+      - rabbitmq
+      - redis
+    networks:
+      - parqueadero-net
+
+  zonas-espacios:
+    build:
+      context: ./zonas-espacios
+      dockerfile: dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-zonas:3306/zonas_espacios?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: zonas_app
+      SPRING_DATASOURCE_PASSWORD: zonas123
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MS_AUTH_VALIDATE: http://usuarios:9090/api/auth/validate
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASSWORD: admin123
+      RABBITMQ_QUEUE: queue_audit
+      RABBITMQ_EXCHANGE: exchange_audit
+      RABBITMQ_ROUTING_KEY: routing_audit
+    depends_on:
+      - mysql-zonas
+      - redis
+      - rabbitmq
+      - usuarios
+    networks:
+      - parqueadero-net
+
+  ms-audit:
+    build:
+      context: ./ms-audit
+      dockerfile: dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      DB_HOST: postgres-audit
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 123456
+      DB_NAME: db_audit
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASSWORD: admin123
+      RABBITMQ_QUEUE: queue_audit
+      RABBITMQ_EXCHANGE: exchange_audit
+      RABBITMQ_ROUTING_KEY: routing_audit
+      THROTTLE_TTL: 60
+      THROTTLE_LIMIT: 10
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - postgres-audit
+      - rabbitmq
+      - redis
+    networks:
+      - parqueadero-net
+
+  tickets:
+    build:
+      context: ./tickets
+      dockerfile: dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: postgres-tickets
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 123456
+      DB_NAME: tickets_db
+      MS_PERSONAS: http://usuarios:9090/api/users
+      MS_ZONAS: http://zonas-espacios:8081/api/espacios
+      MS_VEHICULOS: http://vehiculo:3001/vehiculo
+      MS_AUTH_VALIDATE: http://usuarios:9090/api/auth/validate
+      INTERNAL_API_KEY: internal-service-key-parcial2
+      JWT_SECRET: parcial2-arqui-jwt-secret-key-2026-min-256-bits!!
+      TARIFA_HORA: 1.0
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASSWORD: admin123
+      RABBITMQ_QUEUE: queue_audit
+      RABBITMQ_EXCHANGE: exchange_audit
+      RABBITMQ_ROUTING_KEY: routing_audit
+    depends_on:
+      - postgres-tickets
+      - redis
+      - rabbitmq
+      - usuarios
+      - zonas-espacios
+      - vehiculo
+    networks:
+      - parqueadero-net
+
+  vehiculo:
+    build:
+      context: ./vehiculo
+      dockerfile: dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DB_HOST: postgres-vehiculo
+      DB_PORT: 5432
+      DB_USUARIO: postgres
+      DB_CONTRASENA: 123456
+      DB_NOMBRE: vehiculos_db
+      JWT_SECRET: parcial2-arqui-jwt-secret-key-2026-min-256-bits!!
+      INTERNAL_API_KEY: internal-service-key-parcial2
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASSWORD: admin123
+      RABBITMQ_QUEUE: queue_audit
+      RABBITMQ_EXCHANGE: exchange_audit
+      RABBITMQ_ROUTING_KEY: routing_audit
+      THROTTLE_TTL: 60
+      THROTTLE_LIMIT: 10
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MS_AUTH_VALIDATE: http://usuarios:9090/api/auth/validate
+    depends_on:
+      - postgres-vehiculo
+      - rabbitmq
+      - redis
+      - usuarios
+    networks:
+      - parqueadero-net
+
+  frontend-monitoreo:
+    build:
+      context: ./MONITOREO
+      dockerfile: dockerfile
+    ports:
+      - "8000:80"
+    depends_on:
+      - api-gateway
+      - zonas-espacios
+      - usuarios
+      - vehiculo
+    networks:
+      - parqueadero-net
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "8001:8001"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8080
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    depends_on:
+      - usuarios
+      - zonas-espacios
+      - tickets
+      - vehiculo
+      - ms-audit
+    networks:
+      - parqueadero-net
+
+  # RabbitMQ: broker de eventos de dominio → ms-audit
+  # Credenciales por defecto del image management: guest/guest en localhost;
+  # en red Docker se usan admin/admin123 vía RABBITMQ_DEFAULT_*
+
+  postgres-usuarios:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: usuarios_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-usuarios-data:/var/lib/postgresql/data
+    networks:
+      - parqueadero-net
+
+  postgres-tickets:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tickets_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-tickets-data:/var/lib/postgresql/data
+    networks:
+      - parqueadero-net
+
+  postgres-vehiculo:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vehiculos_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-vehiculo-data:/var/lib/postgresql/data
+    networks:
+      - parqueadero-net
+
+  postgres-audit:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: db_audit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-audit-data:/var/lib/postgresql/data
+    networks:
+      - parqueadero-net
+
+  mysql-zonas:
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: zonas_espacios
+      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_USER: zonas_app
+      MYSQL_PASSWORD: zonas123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-zonas-data:/var/lib/mysql
+    networks:
+      - parqueadero-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - parqueadero-net
+
+networks:
+  parqueadero-net:
+    driver: bridge
+
+volumes:
+  postgres-usuarios-data:
+  postgres-tickets-data:
+  postgres-vehiculo-data:
+  postgres-audit-data:
+  mysql-zonas-data:
+  redis-data:
+  rabbitmq-data:

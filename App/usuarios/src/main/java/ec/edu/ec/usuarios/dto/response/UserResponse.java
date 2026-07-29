@@ -16,4 +16,7 @@ public class UserResponse {
     private LocalDateTime lastLogin;
     private PersonResponse person;
     private List<String> roles;
+    private UUID tenantId;
+    private String tenantSlug;
+    private String tenantName;
 }

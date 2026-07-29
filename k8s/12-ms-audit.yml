@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-audit
+  namespace: parqueaderos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-audit
+  template:
+    metadata:
+      labels:
+        app: ms-audit
+    spec:
+      containers:
+      - name: ms-audit
+        image: ms-audit:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3004
+        env:
+        - name: PORT
+          value: "3004"
+        - name: DB_HOST
+          value: "postgres-audit"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "123456"
+        - name: DB_NAME
+          value: "db_audit"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "admin"
+        - name: RABBITMQ_PASSWORD
+          value: "admin123"
+        - name: RABBITMQ_QUEUE
+          value: "queue_audit"
+        - name: RABBITMQ_EXCHANGE
+          value: "exchange_audit"
+        - name: RABBITMQ_ROUTING_KEY
+          value: "routing_audit"
+        - name: THROTTLE_TTL
+          value: "60"
+        - name: THROTTLE_LIMIT
+          value: "10"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-audit
+  namespace: parqueaderos
+spec:
+  selector:
+    app: ms-audit
+  ports:
+  - port: 3004
+    targetPort: 3004

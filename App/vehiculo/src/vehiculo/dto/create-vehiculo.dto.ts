@@ -23,7 +23,9 @@ class BaseVehiculoDto {
     @IsNotEmpty({ message: 'El modelo no puede estar vacío' })
     @MinLength(1, { message: 'El modelo debe tener al menos 1 carácter' })
     @MaxLength(20, { message: 'El modelo no puede tener más de 20 caracteres' })
-    @Matches(/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/, { message: 'El modelo solo puede contener letras y espacios' })
+    @Matches(/^[a-zA-Z0-9áéíóúÁÉÍÓÚüÜñÑ\s-]+$/, {
+              message: 'El modelo solo puede contener letras, números, espacios y guiones'
+            })
     modelo!: string;
 
     @IsString()

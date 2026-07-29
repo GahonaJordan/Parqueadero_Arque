@@ -11,7 +11,15 @@ public interface ZonaRepositorio extends JpaRepository<Zona, UUID> {
 
     boolean existsByNombre(String nombre);
 
+    boolean existsByTenantIdAndNombre(String tenantId, String nombre);
+
     long countByTipo(TipoZona tipo);
 
+    long countByTenantIdAndTipo(String tenantId, TipoZona tipo);
+
     List<Zona> findByTipo(TipoZona tipo);
+
+    List<Zona> findByTenantId(String tenantId);
+
+    List<Zona> findByTenantIdAndTipo(String tenantId, TipoZona tipo);
 }

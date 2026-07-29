@@ -13,7 +13,13 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name="zonas")
+@Table(
+        name = "zonas",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_zona_tenant_nombre", columnNames = {"tenant_id", "nombre"}),
+                @UniqueConstraint(name = "uk_zona_tenant_codigo", columnNames = {"tenant_id", "codigo"})
+        }
+)
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,19 +30,23 @@ public class Zona {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column (nullable = false, unique = true, length = 25)
+    /** Parqueadero SaaS: condado | cci | espe (obligatorio vía X-Tenant-Id) */
+    @Column(name = "tenant_id", nullable = false, length = 32)
+    private String tenantId;
+
+    @Column(nullable = false, length = 25)
     private String nombre;
 
-    @Column(nullable = false, unique = true, length = 25)
+    @Column(nullable = false, length = 25)
     private String codigo;//ZONA-VIP-01,
 
-    @Column (nullable = false)
+    @Column(nullable = false)
     private String descripcion;
-    @Column (nullable = false)
+    @Column(nullable = false)
     private int capacidad;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false )
+    @Column(nullable = false)
     private TipoZona tipo;
 
     @Column

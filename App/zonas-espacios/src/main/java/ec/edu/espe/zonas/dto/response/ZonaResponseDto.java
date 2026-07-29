@@ -22,6 +22,7 @@ import java.util.UUID;
 public class ZonaResponseDto {
 
     private UUID id;
+    private String tenantId;
     private String nombre;
     private String codigo;//ZONA-VIP-01,
     private String descripcion;

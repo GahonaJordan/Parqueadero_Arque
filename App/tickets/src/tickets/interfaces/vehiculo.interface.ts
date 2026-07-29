@@ -5,4 +5,5 @@ export interface Vehiculo {
     color: string;
     anio: number;
     tipo: string;
+    ownerDni?: string;
 }

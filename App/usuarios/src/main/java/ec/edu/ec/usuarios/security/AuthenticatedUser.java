@@ -2,4 +2,4 @@ package ec.edu.ec.usuarios.security;
 
 import java.util.UUID;
 
-public record AuthenticatedUser(UUID userId, String username) {}
+public record AuthenticatedUser(UUID userId, String username, UUID tenantId) {}

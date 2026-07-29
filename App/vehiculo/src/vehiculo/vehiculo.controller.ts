@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
 import { VehiculoService } from './vehiculo.service';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
 import { UpdateVehiculoDto } from './dto/update-vehiculo.dto';
 import { InternalOrJwtAuthGuard } from '../auth/internal-or-jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import type { Request } from 'express';
 
 @Controller('vehiculo')
 @UseGuards(InternalOrJwtAuthGuard, RolesGuard)
@@ -12,38 +13,43 @@ export class VehiculoController {
   constructor(private readonly vehiculoService: VehiculoService) {}
 
   @Post()
-  @Roles('ADMIN', 'OPERADOR', 'SERVICE')
-  create(@Body() createVehiculoDto: CreateVehiculoDto) {
-    return this.vehiculoService.create(createVehiculoDto);
+  @Roles('SUPER_ADMIN', 'ADMIN', 'USUARIO', 'SERVICE')
+  create(@Body() createVehiculoDto: CreateVehiculoDto, @Req() request: Request) {
+    return this.vehiculoService.create(createVehiculoDto, request);
   }
 
   @Get()
-  @Roles('ADMIN', 'OPERADOR', 'USUARIO', 'SERVICE')
-  findAll() {
-    return this.vehiculoService.findAll();
+  @Roles('SUPER_ADMIN', 'ADMIN', 'USUARIO', 'SERVICE')
+  findAll(@Req() request: Request) {
+    return this.vehiculoService.findAll(request);
   }
 
   @Get('placa/:placa')
-  @Roles('ADMIN', 'OPERADOR', 'USUARIO', 'SERVICE')
-  findByPlaca(@Param('placa') placa: string) {
-    return this.vehiculoService.findByPlaca(placa);
+  @Roles('SUPER_ADMIN', 'ADMIN', 'USUARIO', 'SERVICE')
+  findByPlaca(@Param('placa') placa: string, @Req() request: Request) {
+    return this.vehiculoService.findByPlaca(placa, request);
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'OPERADOR', 'USUARIO', 'SERVICE')
-  findOne(@Param('id') id: string) {
-    return this.vehiculoService.findOne(id);
+  @Roles('SUPER_ADMIN', 'ADMIN', 'USUARIO', 'SERVICE')
+  findOne(@Param('id') id: string, @Req() request: Request) {
+    return this.vehiculoService.findOne(id, request);
   }
 
+  /** USUARIO no puede modificar ni eliminar — solo SUPER_ADMIN/ADMIN/SERVICE */
   @Patch(':id')
-  @Roles('ADMIN', 'OPERADOR', 'SERVICE')
-  update(@Param('id') id: string, @Body() updateVehiculoDto: UpdateVehiculoDto) {
-    return this.vehiculoService.update(id, updateVehiculoDto);
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SERVICE')
+  update(
+    @Param('id') id: string,
+    @Body() updateVehiculoDto: UpdateVehiculoDto,
+    @Req() request: Request,
+  ) {
+    return this.vehiculoService.update(id, updateVehiculoDto, request);
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'SERVICE')
-  remove(@Param('id') id: string) {
-    return this.vehiculoService.remove(id);
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SERVICE')
+  remove(@Param('id') id: string, @Req() request: Request) {
+    return this.vehiculoService.remove(id, request);
   }
 }

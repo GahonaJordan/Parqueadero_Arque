@@ -27,4 +27,8 @@ public class ZonaRequestDto {
     @NotNull(message = "El tipo de zona es obligatorio")
     @NotBlank(message = "El tipo de zona no puede estar vacío")
     private String tipo;
+
+    private String tenantId;
+
+    private Boolean activo;
 }

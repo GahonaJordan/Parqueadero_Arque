@@ -13,6 +13,9 @@ export class EventoAuditoria {
     @Column({ type : 'varchar', length : 100})
     entidad!: string;
 
+    @Column({ type : 'uuid', nullable : true })
+    entidadId!: string;
+
     @Column({ type : 'jsonb', nullable : true})
     datos!: any;
     @Column({ type : 'varchar', length : 100})

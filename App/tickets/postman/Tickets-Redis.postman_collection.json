@@ -1,0 +1,224 @@
+{
+  "info": {
+    "name": "Tickets + Redis (Parcial II)",
+    "description": "Docker: ticketsUrl = http://localhost:3000\n\nOrden:\n1) 00 - Generar token ADMIN (debe dar 200)\n2) 01 - Listar espacios\n3) 02 - Crear ticket (2 veces para ver Cache HIT)\n4) docker logs -f parcialii-tickets-1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "ticketsUrl", "value": "http://localhost:8080" },
+    { "key": "usuariosUrl", "value": "http://localhost:8080" },
+    { "key": "zonasUrl", "value": "http://localhost:8080/api" },
+    { "key": "vehiculosUrl", "value": "http://localhost:8080" },
+    { "key": "internalKey", "value": "internal-service-key-parcial2" },
+    { "key": "jwtSecret", "value": "parcial2-arqui-jwt-secret-key-2026-min-256-bits!!" },
+    { "key": "token", "value": "" },
+    { "key": "tenantId", "value": "condado" },
+    { "key": "dni", "value": "1710000001" },
+    { "key": "placa", "value": "BAA-1001" },
+    { "key": "idEspacio", "value": "" },
+    { "key": "zona", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "00 - Generar token ADMIN",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const secret = pm.collectionVariables.get('jwtSecret');",
+              "const header = { alg: 'HS256', typ: 'JWT' };",
+              "const now = Math.floor(Date.now() / 1000);",
+              "const payload = {",
+              "  sub: 'postman',",
+              "  username: 'postman-admin',",
+              "  roles: ['ADMIN', 'OPERADOR'],",
+              "  iat: now,",
+              "  exp: now + 3600",
+              "};",
+              "",
+              "function b64url(obj) {",
+              "  return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(obj)))",
+              "    .replace(/=+$/g, '')",
+              "    .replace(/\\+/g, '-')",
+              "    .replace(/\\//g, '_');",
+              "}",
+              "",
+              "const data = b64url(header) + '.' + b64url(payload);",
+              "const sig = CryptoJS.HmacSHA256(data, secret)",
+              "  .toString(CryptoJS.enc.Base64)",
+              "  .replace(/=+$/g, '')",
+              "  .replace(/\\+/g, '-')",
+              "  .replace(/\\//g, '_');",
+              "",
+              "const token = data + '.' + sig;",
+              "pm.collectionVariables.set('token', token);",
+              "// Importante: inyectar el header aquí ({{token}} a veces se resuelve vacío)",
+              "pm.request.headers.upsert({",
+              "  key: 'Authorization',",
+              "  value: 'Bearer ' + token",
+              "});",
+              "console.log('JWT ADMIN generado (válido 1h)');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Token guardado en variable token', function () {",
+              "  const t = pm.collectionVariables.get('token');",
+              "  pm.expect(t).to.be.a('string');",
+              "  pm.expect(t.split('.').length).to.eql(3);",
+              "});",
+              "pm.test('Auth OK - status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+        ],
+        "url": "{{ticketsUrl}}/tickets",
+        "description": "Genera JWT ADMIN en Pre-request, lo pone en Authorization y llama GET /tickets. Debe responder 200 (no 401). Usa API Gateway :8080 + X-Tenant-Id."
+      }
+    },
+    {
+      "name": "01 - Listar espacios DISPONIBLE",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const list = pm.response.json();",
+              "const disp = (list || []).filter(e => e.estado === 'DISPONIBLE');",
+              "pm.test('Hay espacios DISPONIBLE', () => pm.expect(disp.length).to.be.above(0));",
+              "if (disp[0]) {",
+              "  pm.collectionVariables.set('idEspacio', disp[0].id);",
+              "  pm.collectionVariables.set('zona', disp[0].nombrezona);",
+              "  console.log('idEspacio=', disp[0].id);",
+              "  console.log('zona=', disp[0].nombrezona);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [
+          { "key": "X-Internal-Key", "value": "{{internalKey}}" },
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+        ],
+        "url": "{{zonasUrl}}/espacios",
+        "description": "Guarda idEspacio y zona del primer espacio DISPONIBLE."
+      }
+    },
+    {
+      "name": "02 - Crear ticket (ejercita Redis)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('token')) {",
+              "  throw new Error('Ejecuta primero: 00 - Generar token ADMIN');",
+              "}",
+              "if (!pm.collectionVariables.get('idEspacio')) {",
+              "  throw new Error('Ejecuta primero: 01 - Listar espacios DISPONIBLE');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Auth OK (no 401/403)', function () {",
+              "  pm.expect(pm.response.code).to.not.eql(401);",
+              "  pm.expect(pm.response.code).to.not.eql(403);",
+              "});",
+              "console.log('Body:', pm.response.text());",
+              "console.log('Revisa: docker logs -f parcialii-tickets-1  → Cache MISS / HIT');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"placa\": \"{{placa}}\",\n  \"dni\": \"{{dni}}\",\n  \"idEspacio\": \"{{idEspacio}}\",\n  \"zona\": \"{{zona}}\",\n  \"tenantId\": \"{{tenantId}}\"\n}"
+        },
+        "url": "{{ticketsUrl}}/tickets",
+        "description": "1ra vez = MISS+SET. 2da vez mismo dni/placa = HIT (si cierras el ticket activo o cambias espacio)."
+      }
+    },
+    {
+      "name": "03 - Listar tickets",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": "{{ticketsUrl}}/tickets"
+      }
+    },
+    {
+      "name": "04 - Listar tickets activos",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": "{{ticketsUrl}}/tickets/activos"
+      }
+    },
+    {
+      "name": "05 - Cerrar ticket (poner :id)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+        },
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"activo\": false\n}"
+        },
+        "url": "{{ticketsUrl}}/tickets/PEGA-AQUI-EL-ID-DEL-TICKET",
+        "description": "Copia un id de '04 - Listar tickets activos'."
+      }
+    }
+  ]
+}

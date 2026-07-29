@@ -35,12 +35,13 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserByDni(dni));
     }
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest userRequest) {
-        if (securityUtils.hasRole("OPERADOR") && !securityUtils.isAdmin() && !securityUtils.isService()) {
+        if (securityUtils.isOperadorOnly()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Los operadores no pueden crear usuarios");
         }
+        // isAdmin = SUPER_ADMIN o ADMIN (jerarquía de roles se aplica en el servicio)
         UserResponse userResponse = userService.createUser(userRequest, securityUtils.isAdmin());
         return ResponseEntity.status(HttpStatus.CREATED).body(userResponse);
     }
@@ -49,7 +50,9 @@ public class UserController {
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable UUID userId,
             @Valid @RequestBody UserUpdateRequest request) {
-        if (securityUtils.hasRole("USUARIO") && !securityUtils.isAdmin() && !securityUtils.isService()) {
+        boolean privileged = securityUtils.isAdmin() || securityUtils.isService();
+        if (securityUtils.hasRole("USUARIO") && !privileged
+                && !securityUtils.hasRole("OPERADOR")) {
             UUID currentUserId = securityUtils.getCurrentUserId();
             if (currentUserId == null || !currentUserId.equals(userId)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -65,13 +68,73 @@ public class UserController {
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
+        if (securityUtils.isOperadorOnly()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Los operadores no pueden eliminar usuarios");
+        }
+        if (!securityUtils.isAdmin() && !securityUtils.isService()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo un administrador puede eliminar usuarios");
+        }
         userService.deleteUser(userId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{userId}/roles/{roleId}")
-    public ResponseEntity<UserResponse> assignRoleToUser(@PathVariable UUID userId, @PathVariable UUID roleId) {
-        UserResponse userResponse = userService.assignRole(userId, roleId);
+    public ResponseEntity<UserResponse> assignRoleToUser(
+            @PathVariable UUID userId,
+            @PathVariable UUID roleId) {
+        if (!securityUtils.isAdmin() && !securityUtils.isService()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo un administrador puede asignar roles");
+        }
+        UUID adminUserId = securityUtils.getCurrentUserId();
+        UserResponse userResponse = userService.assignRole(userId, roleId, adminUserId);
+        return ResponseEntity.ok(userResponse);
+    }
+
+    @PutMapping("/{userId}/role/{roleId}")
+    public ResponseEntity<UserResponse> replaceUserRole(
+            @PathVariable UUID userId,
+            @PathVariable UUID roleId) {
+        if (!securityUtils.isAdmin() && !securityUtils.isService()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo un administrador puede cambiar roles");
+        }
+        return ResponseEntity.ok(userService.replaceRole(userId, roleId));
+    }
+
+    @DeleteMapping("/{userId}/roles/{roleId}")
+    public ResponseEntity<UserResponse> unassignRoleFromUser(
+            @PathVariable UUID userId,
+            @PathVariable UUID roleId) {
+        if (!securityUtils.isAdmin() && !securityUtils.isService()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo un administrador puede quitar roles");
+        }
+        UserResponse userResponse = userService.unassignRole(userId, roleId);
+        return ResponseEntity.ok(userResponse);
+    }
+
+    @PutMapping("/{userId}/tenant/{tenantId}")
+    public ResponseEntity<UserResponse> assignTenantToUser(
+            @PathVariable UUID userId,
+            @PathVariable UUID tenantId) {
+        if (!securityUtils.canManageTenant()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "No tiene permiso para asignar tenant");
+        }
+        UserResponse userResponse = userService.assignTenant(userId, tenantId);
+        return ResponseEntity.ok(userResponse);
+    }
+
+    @DeleteMapping("/{userId}/tenant")
+    public ResponseEntity<UserResponse> removeTenantFromUser(@PathVariable UUID userId) {
+        if (!securityUtils.canManageTenant()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "No tiene permiso para quitar tenant");
+        }
+        UserResponse userResponse = userService.unassignTenant(userId);
         return ResponseEntity.ok(userResponse);
     }
 }

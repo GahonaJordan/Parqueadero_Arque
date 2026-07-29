@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, MinLength, MaxLength, Matches, IsObject, IsOptional, IsIP } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, MaxLength, Matches, IsObject, IsOptional, IsIP, IsUUID } from 'class-validator';
 
 export class CreateAuditDto {
     @IsString()
@@ -22,14 +22,17 @@ export class CreateAuditDto {
     @Matches(/^[A-Z-]+$/,
          { message: 'La entidad debe contener solo letras mayúsculas y guiones medios.' })
     entidad!: string;
+    @IsUUID('4', { message: 'El id de la entidad debe ser un UUID valido.' })
+    @IsNotEmpty()
+    entidadId!: string;
     @IsObject()
     @IsOptional()
     datos!: Record<string, any>;
 
     @IsString()
     @IsOptional()
-    @MinLength(5)
-    @MaxLength(25)
+    @MinLength(1)
+    @MaxLength(50)
     @Matches(/^[\p{L}\p{N}._-]+$/u,
          { message: 'El usuario debe contener solo letras, números, puntos, guiones bajos y guiones medios.' })
     usuario!: string;

@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TicketsModule } from './tickets/tickets.module';
 import { Ticket } from './tickets/entities/ticket.entity';
 import { AuthModule } from './auth/auth.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-store';
 
 @Module({
   imports: [
@@ -25,6 +27,23 @@ import { AuthModule } from './auth/auth.module';
       inject: [ConfigService],
     }),
     TicketsModule,
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => ({
+        store: await redisStore({
+          socket: {
+            host: config.get('REDIS_HOST') || 'localhost',
+            port: +(config.get('REDIS_PORT') || 6379),
+          },
+          ...(config.get('REDIS_PASSWORD')
+            ? { password: config.get('REDIS_PASSWORD') }
+            : {}),
+          ttl: 60 * 5 * 1000, // 5 minutos por defecto (ms)
+        }),
+      }),
+      inject: [ConfigService],
+    }),
   ],
 })
 export class AppModule {}

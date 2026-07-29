@@ -14,5 +14,7 @@ public interface PersonRepository extends JpaRepository<Person, UUID> {
 
     boolean existsByDni(String dni);
 
+    boolean existsByPhone(String phone);
+
     Optional<Person> findByDni(String dni);
 }

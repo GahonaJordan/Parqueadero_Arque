@@ -5,12 +5,11 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import java.util.UUID;
-
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -33,6 +32,29 @@ public class JwtService {
                 .getPayload();
     }
 
+    public String generateToken(UUID userId, String username, List<String> roles, String tenantId, String dni) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
+
+        var builder = Jwts.builder()
+                .subject(userId.toString())
+                .claim("username", username)
+                .claim("roles", roles)
+                .issuedAt(now)
+                .expiration(expiry);
+        if (tenantId != null && !tenantId.isBlank()) {
+            builder.claim("tenantId", tenantId);
+        }
+        if (dni != null && !dni.isBlank()) {
+            builder.claim("dni", dni);
+        }
+        return builder.signWith(secretKey).compact();
+    }
+
+    public String extractTenantId(String token) {
+        return parseToken(token).get("tenantId", String.class);
+    }
+
     public boolean isTokenValid(String token) {
         try {
             Claims claims = parseToken(token);
@@ -53,5 +75,9 @@ public class JwtService {
 
     public UUID extractUserId(String token) {
         return UUID.fromString(parseToken(token).getSubject());
+    }
+
+    public long getExpirationMs() {
+        return expirationMs;
     }
 }

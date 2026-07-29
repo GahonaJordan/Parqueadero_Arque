@@ -16,6 +16,9 @@ export abstract class Vehiculo {
   @Column({ unique: true })
   placa!: string;
 
+  @Column({ nullable: true })
+  ownerDni?: string;
+
   @Column()
   marca!: string;
 

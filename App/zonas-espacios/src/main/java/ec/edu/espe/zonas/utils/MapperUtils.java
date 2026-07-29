@@ -15,6 +15,7 @@ public class MapperUtils {
 
         return ZonaResponseDto.builder()
                 .id(objZona.getId())
+                .tenantId(objZona.getTenantId())
                 .nombre(objZona.getNombre())
                 .codigo(objZona.getCodigo())
                 .descripcion(objZona.getDescripcion())
@@ -35,6 +36,7 @@ public class MapperUtils {
                 .descripcion(dto.getDescripcion())
                 .capacidad(dto.getCapacidad())
                 .tipo(TipoZona.valueOf(dto.getTipo().trim().toUpperCase()))
+                .tenantId(dto.getTenantId())
                 .build();
     }
 }

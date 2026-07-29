@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-zonas
+  namespace: parqueaderos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-zonas
+  template:
+    metadata:
+      labels:
+        app: mysql-zonas
+    spec:
+      containers:
+      - name: mysql-zonas
+        image: mysql:latest
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_DATABASE
+          value: "zonas_espacios"
+        - name: MYSQL_ROOT_PASSWORD
+          value: "123"
+        - name: MYSQL_USER
+          value: "zonas_app"
+        - name: MYSQL_PASSWORD
+          value: "zonas123"
+        volumeMounts:
+        - name: mysql-zonas-storage
+          mountPath: /var/lib/mysql
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: mysql-zonas-storage
+        persistentVolumeClaim:
+          claimName: mysql-zonas-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-zonas-pvc
+  namespace: parqueaderos
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-zonas
+  namespace: parqueaderos
+spec:
+  selector:
+    app: mysql-zonas
+  ports:
+  - port: 3306
+    targetPort: 3306

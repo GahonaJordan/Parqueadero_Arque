@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zonas-espacios
+  namespace: parqueaderos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zonas-espacios
+  template:
+    metadata:
+      labels:
+        app: zonas-espacios
+    spec:
+      containers:
+      - name: zonas-espacios
+        image: zonas-espacios:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-zonas:3306/zonas_espacios?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "zonas_app"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "zonas123"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: MS_AUTH_VALIDATE
+          value: "http://usuarios:9090/api/auth/validate"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "admin"
+        - name: RABBITMQ_PASSWORD
+          value: "admin123"
+        - name: RABBITMQ_QUEUE
+          value: "queue_audit"
+        - name: RABBITMQ_EXCHANGE
+          value: "exchange_audit"
+        - name: RABBITMQ_ROUTING_KEY
+          value: "routing_audit"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zonas-espacios
+  namespace: parqueaderos
+spec:
+  selector:
+    app: zonas-espacios
+  ports:
+  - port: 8081
+    targetPort: 8081

@@ -19,6 +19,7 @@ import java.util.UUID;
 public class EspacioResponseDto {
 
     private UUID id;
+    private String tenantId;
     private String nombre;//ZON-VIP-01-001
     private String descripcion;
     private TipoEspacio tipo;

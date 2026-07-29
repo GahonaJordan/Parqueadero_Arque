@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateTicketDto {
 
@@ -34,4 +34,13 @@ export class CreateTicketDto {
   @IsString()
   @IsNotEmpty()
   zona!: string;
+
+  @ApiProperty({
+    example: 'cci',
+    description: 'Parqueadero SaaS (condado | cci | espe). También header X-Tenant-Id',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  tenantId?: string;
 }

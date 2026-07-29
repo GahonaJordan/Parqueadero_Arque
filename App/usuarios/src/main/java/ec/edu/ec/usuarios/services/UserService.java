@@ -13,7 +13,11 @@ public interface UserService {
     List<UserResponse> getAllUsers();
     UserResponse getUserById(UUID id);
     UserResponse getUserByDni(String dni);
-    UserResponse assignRole(UUID userId, UUID roleId);
+    UserResponse assignRole(UUID userId, UUID roleId, UUID adminUserId);
+    UserResponse replaceRole(UUID userId, UUID roleId);
+    UserResponse unassignRole(UUID userId, UUID roleId);
+    UserResponse assignTenant(UUID userId, UUID tenantId);
+    UserResponse unassignTenant(UUID userId);
     UserResponse updateUser(UUID id, UserUpdateRequest request);
     void deleteUser(UUID id);
 

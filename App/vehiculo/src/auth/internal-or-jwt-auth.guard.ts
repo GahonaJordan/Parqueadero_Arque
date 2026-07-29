@@ -10,7 +10,17 @@ export class InternalOrJwtAuthGuard extends AuthGuard('jwt') {
 
   canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
-    const internalKey = request.headers['x-internal-key'];
+    const authHeader = request.headers?.authorization as string | undefined;
+
+    // Preferir JWT de usuario (no elevar a SERVICE si el browser envió ambas)
+    if (authHeader?.startsWith('Bearer ')) {
+      return super.canActivate(context);
+    }
+
+    let internalKey = request.headers['x-internal-key'] || request.headers['X-Internal-Key'];
+    if (Array.isArray(internalKey)) {
+      internalKey = internalKey[0];
+    }
     const expectedKey = this.configService.get<string>(
       'INTERNAL_API_KEY',
       'internal-service-key-parcial2',

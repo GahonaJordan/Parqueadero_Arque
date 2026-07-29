@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-vehiculo
+  namespace: parqueaderos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-vehiculo
+  template:
+    metadata:
+      labels:
+        app: postgres-vehiculo
+    spec:
+      containers:
+      - name: postgres-vehiculo
+        image: postgres:16-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "vehiculos_db"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "123456"
+        volumeMounts:
+        - name: postgres-vehiculo-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: postgres-vehiculo-storage
+        persistentVolumeClaim:
+          claimName: postgres-vehiculo-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-vehiculo-pvc
+  namespace: parqueaderos
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-vehiculo
+  namespace: parqueaderos
+spec:
+  selector:
+    app: postgres-vehiculo
+  ports:
+  - port: 5432
+    targetPort: 5432
