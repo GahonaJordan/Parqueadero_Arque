@@ -23,21 +23,27 @@ jobs:
       matrix:
         include:
           - service: tickets
+            sonarKey: parqueadero-arque-tickets
             path: App/tickets
             type: node
           - service: usuarios
+            sonarKey: usuarios
             path: App/usuarios
             type: maven
           - service: vehiculo
+            sonarKey: vehiculo
             path: App/vehiculo
             type: node
           - service: zonas-espacios
+            sonarKey: zonas-espacios
             path: App/zonas-espacios
             type: maven
           - service: ms-audit
+            sonarKey: ms-audit
             path: App/ms-audit
             type: node
           - service: api-gateway
+            sonarKey: parqueadero-arque-api-gateway
             path: App/api-gateway
             type: other
 
@@ -82,7 +88,7 @@ jobs:
 
           $MVN -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -DskipTests \
-            -Dsonar.projectKey=${{ matrix.service }} \
+            -Dsonar.projectKey=${{ matrix.sonarKey }} \
             -Dsonar.projectName=${{ matrix.service }} \
             -Dsonar.organization=gahonajordan \
             -Dsonar.login=$SONAR_TOKEN
@@ -112,7 +118,7 @@ jobs:
         with:
           projectBaseDir: ${{ matrix.path }}
           args: >
-            -Dsonar.projectKey=${{ matrix.service }}
+            -Dsonar.projectKey=${{ matrix.sonarKey }}
             -Dsonar.projectName=${{ matrix.service }}
             -Dsonar.organization=gahonajordan
             -Dsonar.sources=src
@@ -128,7 +134,7 @@ jobs:
         with:
           projectBaseDir: ${{ matrix.path }}
           args: >
-            -Dsonar.projectKey=${{ matrix.service }}
+            -Dsonar.projectKey=${{ matrix.sonarKey }}
             -Dsonar.projectName=${{ matrix.service }}
             -Dsonar.organization=gahonajordan
             -Dsonar.sources=.
