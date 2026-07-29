@@ -46,6 +46,10 @@ jobs:
             sonarKey: parqueadero-arque-api-gateway
             path: App/api-gateway
             type: other
+          - service: frontend
+            sonarKey: parqueadero-arque-frontend
+            path: App/frontend
+            type: other
 
     steps:
       - name: Checkout
@@ -127,8 +131,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # --- Steps solo para el API Gateway (Kong, config declarativa sin build/tests) ---
-      - name: SonarCloud Scan (api-gateway)
+      # --- Steps para servicios sin build/tests (api-gateway: config Kong, frontend: HTML/CSS/JS plano) ---
+      - name: SonarCloud Scan (static)
         if: matrix.type == 'other'
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         with:
