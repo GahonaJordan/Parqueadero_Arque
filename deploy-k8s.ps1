@@ -22,24 +22,23 @@ Write-Host "`n[4/11] Configurando entorno Docker para Minikube..." -ForegroundCo
 # 5. Construir imágenes Docker
 Write-Host "`n[5/11] Construyendo imágenes Docker..." -ForegroundColor Yellow
 Write-Host "Construyendo api-gateway..." -ForegroundColor Cyan
-docker build -t api-gateway:latest ./api-gateway
+docker build -t api-gateway:latest ./App/api-gateway
 Write-Host "Construyendo usuarios..." -ForegroundColor Cyan
-docker build -t usuarios:latest ./usuarios
+docker build -t usuarios:latest ./App/usuarios
 Write-Host "Construyendo zonas-espacios..." -ForegroundColor Cyan
-docker build -t zonas-espacios:latest ./zonas-espacios
+docker build -t zonas-espacios:latest ./App/zonas-espacios
 Write-Host "Construyendo ms-audit..." -ForegroundColor Cyan
-docker build -t ms-audit:latest ./ms-audit
+docker build -t ms-audit:latest ./App/ms-audit
 Write-Host "Construyendo tickets..." -ForegroundColor Cyan
-docker build -t tickets:latest ./tickets
+docker build -t tickets:latest ./App/tickets
 Write-Host "Construyendo vehiculo..." -ForegroundColor Cyan
-docker build -t vehiculo:latest ./vehiculo
+docker build -t vehiculo:latest ./App/vehiculo
 Write-Host "Construyendo frontend MONITOREO..." -ForegroundColor Cyan
-docker build -t frontend-monitoreo:latest ./MONITOREO
+docker build -t frontend-monitoreo:latest ./Frontend
 
 # 6. Listar imágenes en Minikube
 Write-Host "`n[6/11] Listando imágenes en Minikube..." -ForegroundColor Yellow
 minikube image ls
-minikube status
 
 # 7. Aplicar manifiestos de Kubernetes - Infraestructura
 Write-Host "`n[7/11] Aplicando manifiestos de Kubernetes - Infraestructura..." -ForegroundColor Yellow
@@ -84,19 +83,4 @@ kubectl get pods -n parqueaderos
 kubectl get svc -n parqueaderos
 kubectl get ingress -n parqueaderos
 
-# agregar tunel para acceder a la aplicación desde el navegador
- minikube tunnel
- minikube dashboard
-Write-Host "`n✓ Despliegue completado!" -ForegroundColor Green
-Write-Host "`nComandos útiles:" -ForegroundColor Cyan
-Write-Host "  - Ver pods: kubectl get pods -n parqueaderos" -ForegroundColor White
-Write-Host "  - Ver servicios: kubectl get svc -n parqueaderos" -ForegroundColor White
-Write-Host "  - Ver ingress: kubectl get ingress -n parqueaderos" -ForegroundColor White
-Write-Host '  - Ver logs de un pod: kubectl logs <pod-name> -n parqueaderos' -ForegroundColor White
-Write-Host '  - Acceder a un pod: kubectl exec -it <pod-name> -n parqueaderos -- sh' -ForegroundColor White
-Write-Host "`nPara acceder a la aplicación:" -ForegroundColor Cyan
-Write-Host "  1. Agrega 'parqueaderos.local' a tu archivo hosts (C:\Windows\System32\drivers\etc\hosts)" -ForegroundColor White
-Write-Host "  2. Apunta a la IP de Minikube: $(minikube ip)" -ForegroundColor White
-Write-Host "  3. Accede via http://parqueaderos.local" -ForegroundColor White
-$minikubeIp = minikube ip
-Write-Host "`nIP de Minikube: $minikubeIp" -ForegroundColor Yellow
+
